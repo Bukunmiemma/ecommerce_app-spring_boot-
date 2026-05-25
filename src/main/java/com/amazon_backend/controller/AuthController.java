@@ -200,13 +200,7 @@ public class AuthController {
 
         return ResponseEntity.ok("Valid");
     }
-    @GetMapping("/reset-password-page")
-    public String resetPasswordPage(@RequestParam String token, Model model) {
 
-        model.addAttribute("token", token);
-
-        return "reset-password";
-    }
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
 
@@ -221,38 +215,50 @@ public class AuthController {
         userRepository.save(user);
 
 //        String resetLink = "myapp://reset-password?token=" + token;
-        String link = "myapp://verify-email?token=" + token;
+        String link =
+                "https://ecommerce-app-spring-boot.onrender.com/auth/confirm-reset?token=" + token;
         emailService.sendResetEmail(user.getEmail(), link);
 
         return ResponseEntity.ok("Check your email for reset link");
     }
-    @PostMapping("/reset-password")
-   public ResponseEntity<String> resetPassword(
-           @RequestBody ResetPasswordRequest request
-//            @RequestParam String token,
-//            @RequestParam String newPassword
-    ) {
+    @GetMapping("/confirm-reset")
+    public ResponseEntity<String> confirmReset(@RequestParam String token) {
 
-        User user = userRepository.findByResetToken(
-                        request.getToken()
-//                   token
-                )
+        User user = userRepository.findByResetToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
 
         if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
             return ResponseEntity.badRequest().body("Token expired");
         }
 
-        user.setPassword(passwordEncoder.encode(
-                request.getNewPassword()
-//                newPassword
-        ));
-
+        // OPTIONAL: mark token as "confirmed"
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
-
         userRepository.save(user);
 
+        return ResponseEntity.ok("Token verified. You can now reset password.");
+    }
+    @PostMapping("/reset-password")
+   public ResponseEntity<String> resetPassword(
+           @RequestBody ResetPasswordRequest request
+//
+    ) {
+
+        User user = userRepository.findByResetToken(
+                        request.getToken()
+
+                )
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
+
+        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body("Token expired");
+        }
+        user.setPassword(passwordEncoder.encode(
+                request.getNewPassword()
+        ));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
         return ResponseEntity.ok("Password updated successfully");
     }
 
