@@ -1,11 +1,18 @@
-# Step 1: Use an official Java runtime
-FROM eclipse-temurin:25-jdk
 
-# Step 2: Set working directory inside container
+# Stage 1: Build the app
+FROM maven:3.9-eclipse-temurin-21 AS build
+
 WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests
 
-# Step 3: Copy your jar file into the container
-COPY target/*.jar app.jar
+# Stage 2: Run the app
+FROM eclipse-temurin:21-jdk
 
-# Step 4: Run the application
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+
+EXPOSE 8080
+
 ENTRYPOINT ["java", "-jar", "app.jar"]
+
