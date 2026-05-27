@@ -45,23 +45,23 @@ public class AuthService {
         this.emailService = emailService;
     }
 
-    public String generateResetToken() {
-        return UUID.randomUUID().toString();
+    public String generateResetOtp() {
+        return String.valueOf((int)(Math.random() * 900000) + 100000);
     }
 
-    public void resetPassword(String token, String newPassword) {
+    public void resetPassword(String otp, String newPassword) {
 
-        User user = userRepository.findByResetToken(token)
+        User user = userRepository.findByResetOtp(otp)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
 
-        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Token expired");
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
 
-        user.setResetToken(null);
-        user.setResetTokenExpiry(null);
+        user.setResetOtp(null);
+        user.setOtpExpiry(null);
 
         userRepository.save(user);
     }

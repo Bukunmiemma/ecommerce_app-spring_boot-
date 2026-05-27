@@ -57,15 +57,15 @@ public class AuthController {
         this.emailService = emailService;
 
     }
-    @GetMapping("/test-email")
-    public ResponseEntity<String> testEmail() {
-        emailService.sendResetEmail(
-                "yourtestemail@gmail.com",
-                "http://test-link.com/reset"
-        );
-
-        return ResponseEntity.ok("Email sent");
-    }
+//    @GetMapping("/test-email")
+//    public ResponseEntity<String> testEmail() {
+//        emailService.sendResetEmail(
+//                "yourtestemail@gmail.com",
+//                "http://test-link.com/reset"
+//        );
+//
+//        return ResponseEntity.ok("Email sent");
+//    }
     @PostMapping("/signup")
     public AuthResponse  signup(
             @Valid @RequestBody SignupRequest request
@@ -207,33 +207,31 @@ public class AuthController {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = UUID.randomUUID().toString();
+        String otp = String.valueOf((int)(Math.random() * 900000) + 100000);
 
-        user.setResetToken(token);
-        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(30));
+
+        user.setResetOtp(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
 
         userRepository.save(user);
+        emailService.sendOtpEmail(user.getEmail(), otp);
 
-//        String resetLink = "myapp://reset-password?token=" + token;
-        String link =
-                "https://ecommerce-app-spring-boot.onrender.com/auth/confirm-reset?token=" + token;
-        emailService.sendResetEmail(user.getEmail(), link);
-
-        return ResponseEntity.ok("Check your email for reset link");
+//
+        return ResponseEntity.ok("OTP Sent Successfully!");
     }
     @GetMapping("/confirm-reset")
     public ResponseEntity<String> confirmReset(@RequestParam String token) {
 
-        User user = userRepository.findByResetToken(token)
+        User user = userRepository.findByResetOtp(token)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
 
-        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
             return ResponseEntity.badRequest().body("Token expired");
         }
 
         // OPTIONAL: mark token as "confirmed"
-        user.setResetToken(null);
-        user.setResetTokenExpiry(null);
+        user.setResetOtp(null);
+        user.setOtpExpiry(null);
         userRepository.save(user);
 
         return ResponseEntity.ok("Token verified. You can now reset password.");
@@ -244,20 +242,20 @@ public class AuthController {
 //
     ) {
 
-        User user = userRepository.findByResetToken(
+        User user = userRepository.findByResetOtp(
                         request.getToken()
 
                 )
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
 
-        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
             return ResponseEntity.badRequest().body("Token expired");
         }
         user.setPassword(passwordEncoder.encode(
                 request.getNewPassword()
         ));
-        user.setResetToken(null);
-        user.setResetTokenExpiry(null);
+        user.setResetOtp(null);
+        user.setOtpExpiry(null);
         userRepository.save(user);
         return ResponseEntity.ok("Password updated successfully");
     }
