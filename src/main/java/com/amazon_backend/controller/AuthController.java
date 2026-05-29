@@ -203,11 +203,14 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        System.out.println("FORGOT PASSWORD ENDPOINT HIT");
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        System.out.println("USER FOUND: " + user.getEmail());
 
         String otp = String.valueOf((int)(Math.random() * 900000) + 100000);
+        System.out.println("OTP GENERATED: " + otp);
 
 
         user.setResetOtp(otp);
@@ -215,6 +218,7 @@ public class AuthController {
 
         userRepository.save(user);
         emailService.sendOtpEmail(user.getEmail(), otp);
+        System.out.println("OTP SAVED");
 
 //
         return ResponseEntity.ok("OTP Sent Successfully!");
