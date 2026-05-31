@@ -13,13 +13,24 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    public void sendOtpEmail(String email, String otp) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("Password Reset OTP");
-        message.setText("Your OTP is: " + otp + "\nIt expires in 10 minutes.");
+    public void sendResetOtp(String email, String otp) {
 
-        mailSender.send(message);
+        try{
+            System.out.println("STARTING EMAIL SEND");
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Password Reset OTP");
+            message.setText("Your OTP is: " + otp + "\n It expires in 10 minutes.");
+
+            mailSender.send(message);
+            System.out.println("OTP EMAIL SENT SUCCESSFULLY");}
+        catch (Exception e){
+            System.out.println("EMAIL ERROR: " + e.getMessage());
+
+            e.printStackTrace();
+        }
+
+
     }
 //        public void sendResetEmail(String email, String link) {
 //
@@ -30,7 +41,7 @@ public class EmailService {
 //    SimpleMailMessage message = new SimpleMailMessage();
 //    message.setTo(email);
 //    message.setSubject("Password Reset Request");
-////    message.setText("Click this link to reset your password:\n" + link);
+//  message.setText("Click this link to reset your password:\n" + link);
 //    message.setText(
 //            "Copy and paste this link into your browser:\n\n"
 //                    + link

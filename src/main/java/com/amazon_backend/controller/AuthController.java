@@ -212,16 +212,29 @@ public class AuthController {
         String otp = String.valueOf((int)(Math.random() * 900000) + 100000);
         System.out.println("OTP GENERATED: " + otp);
 
+try{
+    user.setResetOtp(otp);
+    user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
 
-        user.setResetOtp(otp);
-        user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+    userRepository.save(user);
+    System.out.println("OTP SAVED SUCCESSFULLY");
 
-        userRepository.save(user);
-        emailService.sendOtpEmail(user.getEmail(), otp);
-        System.out.println("OTP SAVED");
+    emailService.sendResetOtp(user.getEmail(), otp);
+    System.out.println("EMAIL SENT METHOD CALLED");
+    return ResponseEntity.ok("OTP Sent Successfully!");
+
+}catch(Exception e){
+    System.out.println("ERROR HERE: " + e.getMessage());
+
+    e.printStackTrace();
+    return ResponseEntity
+            .badRequest()
+            .body("ERROR: " + e.getMessage());
+}
+
+
 
 //
-        return ResponseEntity.ok("OTP Sent Successfully!");
     }
     @GetMapping("/confirm-reset")
     public ResponseEntity<String> confirmReset(@RequestParam String token) {
@@ -247,13 +260,13 @@ public class AuthController {
     ) {
 
         User user = userRepository.findByResetOtp(
-                        request.getToken()
+                        request.getEmail()
 
                 )
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new RuntimeException("NO EMAIL FOUND"));
 
         if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-            return ResponseEntity.badRequest().body("Token expired");
+            return ResponseEntity.badRequest().body("BAD REQUEST");
         }
         user.setPassword(passwordEncoder.encode(
                 request.getNewPassword()
