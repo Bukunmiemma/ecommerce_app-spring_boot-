@@ -1,60 +1,46 @@
 package com.amazon_backend.service;
 
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import com.resend.services.emails.model.CreateEmailOptions;
+
 import org.springframework.stereotype.Service;
+
+
+import com.resend.Resend;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class EmailService {
 
-    private JavaMailSender mailSender;
-
-    public  EmailService(JavaMailSender mailSender){
-        this.mailSender = mailSender;
-    }
+    @Value("${resend.api.key}")
+    private String apiKey;
 
     public void sendResetOtp(String email, String otp) {
 
-        try{
-            System.out.println("STARTING EMAIL SEND");
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(email);
-            message.setSubject("Password Reset OTP");
-            message.setText("Your OTP is: " + otp + "\n It expires in 10 minutes.");
+        try {
 
-            mailSender.send(message);
-            System.out.println("OTP EMAIL SENT SUCCESSFULLY");}
-        catch (Exception e){
+            System.out.println("STARTING RESEND EMAIL SEND");
+
+            Resend resend = new Resend(apiKey);
+
+            CreateEmailOptions request = CreateEmailOptions.builder()
+                    .from("onboarding@resend.dev")
+                    .to(email)
+                    .subject("Password Reset OTP")
+                    .html(
+                            "<h2>Password Reset OTP</h2>" +
+                                    "<p>Your OTP is: <strong>" + otp + "</strong></p>" +
+                                    "<p>It expires in 10 minutes.</p>"
+                    )
+                    .build();
+
+            resend.emails().send(request);
+
+            System.out.println("OTP EMAIL SENT SUCCESSFULLY");
+
+        } catch (Exception e) {
+
             System.out.println("EMAIL ERROR: " + e.getMessage());
-
             e.printStackTrace();
         }
-
-
     }
-//        public void sendResetEmail(String email, String link) {
-//
-//
-//try{
-//    System.out.println("Sending email to: " + email);
-//    System.out.println("Reset Link: " + link);
-//    SimpleMailMessage message = new SimpleMailMessage();
-//    message.setTo(email);
-//    message.setSubject("Password Reset Request");
-//  message.setText("Click this link to reset your password:\n" + link);
-//    message.setText(
-//            "Copy and paste this link into your browser:\n\n"
-//                    + link
-//    );
-//    mailSender.send(message);
-//    System.out.println("EMAIL SENT SUCCESSFULLY");
-//}
-//        catch (Exception e) {
-//        System.out.println("EMAIL FAILED: " + e.getMessage());
-//        throw e;
-//    }
-//
-//        }
-
-
 }
