@@ -55,7 +55,8 @@ public class OtpService {
         );
     }
 
-    public void clearOtpVerification(String email) {
+    public void clearOtpData(String email) {
+        redisTemplate.delete("otp:" + email);
         redisTemplate.delete("otp_verified:" + email);
     }
 }

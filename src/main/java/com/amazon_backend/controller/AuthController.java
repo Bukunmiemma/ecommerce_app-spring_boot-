@@ -274,12 +274,16 @@ public class AuthController {
 
     //Verify Otp
     @PostMapping("/verify-otp")
-    public ResponseEntity<String> verifyOtp(@RequestBody OtpRequest request) {
+    public ResponseEntity<?> verifyOtp(@RequestBody OtpRequest request) {
 
         boolean valid = otpService.verifyOtp(request.getEmail(), request.getOtp());
 
         if (!valid) {
-            return ResponseEntity.badRequest().body("Invalid or expired OTP");
+             return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "success", false,
+                            "message", "OTP not verified"
+                    ));
         }
 
         return ResponseEntity.ok("Verified successfully");
@@ -306,14 +310,6 @@ public class AuthController {
                     ));
         }
 
-
-        // 2. Find user
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // 3. Update password (IMPORTANT: encode it!)
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             return ResponseEntity.badRequest()
                     .body(Map.of(
@@ -321,10 +317,18 @@ public class AuthController {
                             "message", "Passwords do not match"
                     ));
         }
+        // 2. Find user
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 3. Update password (IMPORTANT: encode it!)
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+
 
         userRepository.save(user);
         // remove verification after password reset
-        otpService.clearOtpVerification(email);
+        otpService.clearOtpData(email);
 
         return ResponseEntity.ok(   Map.of(
                 "success", true,
