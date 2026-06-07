@@ -23,11 +23,7 @@ public class User {
     private String password;
     @Enumerated(EnumType.STRING)
     private Role role;
-    @Column(name= "reset_otp")
-    private String resetOtp;
 
-    @Column(name= "otp_expiry")
-    private LocalDateTime otpExpiry;
 
 
 
@@ -81,20 +77,6 @@ public class User {
         this.role = role;
     }
 
-    public LocalDateTime getOtpExpiry() {
-        return otpExpiry;
-    }
 
-    public void setOtpExpiry(LocalDateTime otpExpiry) {
-        this.otpExpiry = otpExpiry;
-    }
-
-    public String getResetOtp() {
-        return resetOtp;
-    }
-
-    public void setResetOtp(String resetOtp) {
-        this.resetOtp = resetOtp;
-    }
 }
 

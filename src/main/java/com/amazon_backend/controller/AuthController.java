@@ -8,6 +8,7 @@ import com.amazon_backend.service.*;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,7 +19,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 
 @RestController
@@ -34,6 +37,9 @@ public class AuthController {
     private final GoogleTokenVerifier googleTokenVerifier;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final OtpService otpService;
+    private final StringRedisTemplate stringRedisTemplate;
+
 
     public AuthController(AuthService authService,
                           RefreshTokenService refreshTokenService,
@@ -43,7 +49,10 @@ public class AuthController {
                           AuthenticationManager authenticationManager,
                           GoogleTokenVerifier googleTokenVerifier,
                           PasswordEncoder passwordEncoder,
-                          EmailService emailService
+                          EmailService emailService,
+                          OtpService otpService,
+                          StringRedisTemplate stringRedisTemplate
+
 
     ) {
         this.authService=authService;
@@ -55,6 +64,8 @@ public class AuthController {
         this.googleTokenVerifier = googleTokenVerifier;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.otpService= otpService;
+        this.stringRedisTemplate= stringRedisTemplate;
 
     }
 //    @GetMapping("/test-email")
@@ -202,80 +213,166 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        System.out.println("FORGOT PASSWORD ENDPOINT HIT");
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        String email = request.getEmail();
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        System.out.println("USER FOUND: " + user.getEmail());
+        // cooldown key
+        String cooldownKey = "otp_cooldown:" + email;
 
-        String otp = String.valueOf((int)(Math.random() * 900000) + 100000);
-        System.out.println("OTP GENERATED: " + otp);
+        // prevent spam requests
+        if (Boolean.TRUE.equals(
+                stringRedisTemplate.hasKey(cooldownKey)
+        )) {
 
-try{
-    user.setResetOtp(otp);
-    user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
-
-    userRepository.save(user);
-    System.out.println("OTP SAVED SUCCESSFULLY");
-
-    emailService.sendResetOtp(user.getEmail(), otp);
-    System.out.println("EMAIL SENT METHOD CALLED");
-    return ResponseEntity.ok("OTP Sent Successfully!");
-
-}catch(Exception e){
-    System.out.println("ERROR HERE: " + e.getMessage());
-
-    e.printStackTrace();
-    return ResponseEntity
-            .badRequest()
-            .body("ERROR: " + e.getMessage());
-}
-
-
-
-//
-    }
-    @GetMapping("/confirm-reset")
-    public ResponseEntity<String> confirmReset(@RequestParam String token) {
-
-        User user = userRepository.findByResetOtp(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
-
-        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-            return ResponseEntity.badRequest().body("Token expired");
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Please wait before requesting for another OTP"
+                    ));
         }
 
-        // OPTIONAL: mark token as "confirmed"
-        user.setResetOtp(null);
-        user.setOtpExpiry(null);
-        userRepository.save(user);
+        // generate OTP
+        String otp = String.format(
+                "%06d",
+                new Random().nextInt(1000000)
+        );
 
-        return ResponseEntity.ok("Token verified. You can now reset password.");
+        // save OTP
+        otpService.saveOtp(email, otp);
+
+        // set cooldown for 60 seconds
+        stringRedisTemplate.opsForValue()
+                .set(
+                        cooldownKey,
+                        "1",
+                        60,
+                        TimeUnit.SECONDS
+                );
+
+        try {
+            // send email
+
+            emailService.sendResetOtp(email, otp);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Failed to send email"
+                    ));
+        }
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "success", true,
+                        "message", "OTP sent successfully"
+                ) );
+
+
     }
+
+    //Verify Otp
+    @PostMapping("/verify-otp")
+    public ResponseEntity<String> verifyOtp(@RequestBody OtpRequest request) {
+
+        boolean valid = otpService.verifyOtp(request.getEmail(), request.getOtp());
+
+        if (!valid) {
+            return ResponseEntity.badRequest().body("Invalid or expired OTP");
+        }
+
+        return ResponseEntity.ok("Verified successfully");
+    }
+
     @PostMapping("/reset-password")
-   public ResponseEntity<String> resetPassword(
-           @RequestBody ResetPasswordRequest request
-//
-    ) {
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
 
-        User user = userRepository.findByResetOtp(
-                        request.getEmail()
+        String email = request.getEmail();
 
-                )
-                .orElseThrow(() -> new RuntimeException("NO EMAIL FOUND"));
+        // 1. Check if OTP still exists (VERY IMPORTANT SECURITY STEP)
+        if (!otpService.isOtpVerified(email)) {
 
-        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-            return ResponseEntity.badRequest().body("BAD REQUEST");
+            return ResponseEntity.badRequest()
+                    .body("OTP not verified");
         }
-        user.setPassword(passwordEncoder.encode(
-                request.getNewPassword()
-        ));
-        user.setResetOtp(null);
-        user.setOtpExpiry(null);
+        // password validation
+        if (request.getNewPassword().length() < 6) {
+
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Password must be at least 6 characters"
+                    ));
+        }
+
+
+        // 2. Find user
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 3. Update password (IMPORTANT: encode it!)
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "success", false,
+                            "message", "Passwords do not match"
+                    ));
+        }
+
         userRepository.save(user);
-        return ResponseEntity.ok("Password updated successfully");
+        // remove verification after password reset
+        otpService.clearOtpVerification(email);
+
+        return ResponseEntity.ok(   Map.of(
+                "success", true,
+                "message", "Verified successfully"
+        )          );
     }
+
+
+
+//    @GetMapping("/confirm-reset")
+//    public ResponseEntity<String> confirmReset(@RequestParam String token) {
+//
+//        User user = userRepository.findByResetOtp(token)
+//                .orElseThrow(() -> new RuntimeException("Invalid token"));
+//
+//        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+//            return ResponseEntity.badRequest().body("Token expired");
+//        }
+//
+//        // OPTIONAL: mark token as "confirmed"
+//
+//        userRepository.save(user);
+//
+//        return ResponseEntity.ok("Token verified. You can now reset password.");
+//    }
+//    @PostMapping("/reset-password")
+//   public ResponseEntity<String> resetPassword(
+//           @RequestBody ResetPasswordRequest request
+////
+//    ) {
+//
+//        User user = userRepository.findByResetOtp(
+//                        request.getEmail()
+//
+//                )
+//                .orElseThrow(() -> new RuntimeException("NO EMAIL FOUND"));
+//
+//        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+//            return ResponseEntity.badRequest().body("BAD REQUEST");
+//        }
+//        user.setPassword(passwordEncoder.encode(
+//                request.getNewPassword()
+//        ));
+//        user.setResetOtp(null);
+//        user.setOtpExpiry(null);
+//        userRepository.save(user);
+//        return ResponseEntity.ok("Password updated successfully");
+//    }
 
 
 

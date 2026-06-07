@@ -45,26 +45,26 @@ public class AuthService {
         this.emailService = emailService;
     }
 
-    public String generateResetOtp() {
-        return String.valueOf((int)(Math.random() * 900000) + 100000);
-    }
+//    public String generateResetOtp() {
+//        return String.valueOf((int)(Math.random() * 900000) + 100000);
+//    }
 
-    public void resetPassword(String otp, String newPassword) {
-
-        User user = userRepository.findByResetOtp(otp)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
-
-        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Token expired");
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-
-        user.setResetOtp(null);
-        user.setOtpExpiry(null);
-
-        userRepository.save(user);
-    }
+//    public void resetPassword(String otp, String newPassword) {
+//
+//        User user = userRepository.findByResetOtp(otp)
+//                .orElseThrow(() -> new RuntimeException("Invalid token"));
+//
+//        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+//            throw new RuntimeException("Token expired");
+//        }
+//
+//        user.setPassword(passwordEncoder.encode(newPassword));
+//
+//        user.setResetOtp(null);
+//        user.setOtpExpiry(null);
+//
+//        userRepository.save(user);
+//    }
     public String signup(SignupRequest request) {
 
             if (userRepository.findByEmail(request.getEmail()).isPresent()) {
