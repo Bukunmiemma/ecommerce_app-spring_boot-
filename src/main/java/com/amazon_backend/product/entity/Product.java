@@ -19,7 +19,7 @@ public class Product {
 
     private String description;
     private BigDecimal price;
-    private  Integer StockQuantity;
+    private  Integer stockQuantity;
 
     @ManyToMany
     @JoinTable(
@@ -63,11 +63,11 @@ public class Product {
     }
 
     public Integer getStockQuantity() {
-        return StockQuantity;
+        return stockQuantity;
     }
 
     public void setStockQuantity(Integer stockQuantity) {
-        StockQuantity = stockQuantity;
+        this.stockQuantity = stockQuantity;
     }
 
     public Set<Category> getCategories() {

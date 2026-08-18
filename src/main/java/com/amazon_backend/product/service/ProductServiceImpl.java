@@ -5,8 +5,10 @@ import com.amazon_backend.category.exception.CategoryNotFoundException;
 import com.amazon_backend.category.repository.CategoryRepository;
 import com.amazon_backend.product.dto.ProductRequest;
 import com.amazon_backend.product.dto.ProductResponse;
+import com.amazon_backend.product.dto.UpdateProductRequest;
 import com.amazon_backend.product.entity.Product;
 import com.amazon_backend.product.exception.ProductAlreadyExistsException;
+import com.amazon_backend.product.exception.ProductNotFoundException;
 import com.amazon_backend.product.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +34,7 @@ public class ProductServiceImpl implements ProductService {
         ProductResponse response = new ProductResponse();
 
         response.setId(product.getId());
+        response.setName(product.getName());
         response.setDescription(product.getDescription());
         response.setPrice(product.getPrice());
         response.setStockQuantity(product.getStockQuantity());
@@ -42,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
         response.setCategories(categoryNames);
         return response;
     }
+
 
     @Override
     public ProductResponse createProduct(ProductRequest request){
@@ -71,5 +75,37 @@ return mapToProductResponse(savedProduct);
         return products.stream().map(this::mapToProductResponse).collect(Collectors.toList());
     }
 
+@Override
+    public ProductResponse getProductById(Long id){
+        Product product = productRepository.findById(id).orElseThrow(
+                ()-> new ProductNotFoundException("Product not found with id: " + id)
+        );
+        return mapToProductResponse(product);
+}
 
+    @Override
+    public ProductResponse updateProduct (Long id, UpdateProductRequest request){
+
+        Product product = productRepository.findById(id)
+                .orElseThrow( ()-> new ProductNotFoundException("Product not found")  );
+        Set<Category> categories = new HashSet<>(categoryRepository.findAllById(request.getCategoryIds()));
+        if ( categories.size() != request.getCategoryIds().size()){
+            throw new CategoryNotFoundException("One or more categories do not exist");
+        }
+         product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setStockQuantity(request.getStockQuantity());
+        product.setCategories(categories);
+
+        Product updatedProduct = productRepository.save(product);
+        return  mapToProductResponse(updatedProduct);
+
+    }
+    @Override
+    public void deleteProduct (Long id){
+        Product product = productRepository.findById(id)
+                .orElseThrow( ()-> new ProductNotFoundException("Product not found")  );
+        productRepository.delete(product);
+    }
 }

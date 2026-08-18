@@ -7,6 +7,7 @@ import com.amazon_backend.auth.service.JwtService;
 import com.amazon_backend.auth.service.RefreshTokenService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -87,7 +88,34 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .anyRequest().authenticated())
+
+                        // Product Management for ADMIN Only
+                        .requestMatchers(HttpMethod.POST,"/api/categories/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT,"/api/categories/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE,"/api/categories/**")
+                        .hasRole("ADMIN")
+
+
+                        // Product Management for ADMIN Only
+                        .requestMatchers(HttpMethod.POST,"/api/products/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/products/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/**")
+                        .hasRole("ADMIN")
+
+                        //Product/category viewing for users
+                        .requestMatchers(HttpMethod.GET,"/api/products/**")
+                        .authenticated()
+                        .requestMatchers(HttpMethod.GET,"/api/categories/**")
+                        .authenticated()
+                        .anyRequest().authenticated()
+
+
+
+                )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler((request, response, authentication) -> {
 

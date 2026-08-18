@@ -3,6 +3,7 @@ package com.amazon_backend.product.controller;
 
 import com.amazon_backend.product.dto.ProductRequest;
 import com.amazon_backend.product.dto.ProductResponse;
+import com.amazon_backend.product.dto.UpdateProductRequest;
 import com.amazon_backend.product.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,31 @@ public class ProductController {
     public ResponseEntity<List<ProductResponse>> getAllProducts(){
         List<ProductResponse> products = productService.getAllProducts();
         return  ResponseEntity.ok(products);
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductResponse> getProductById(
+            @PathVariable Long id
+    ){
+        ProductResponse response = productService.getProductById(id);
+        return ResponseEntity.ok(response);
+    }
+     @PutMapping("/{id}")
+     public ResponseEntity<ProductResponse> updateProduct(
+             @PathVariable Long id,
+             @Valid @RequestBody
+             UpdateProductRequest request
+     ){
+        return ResponseEntity.ok(
+                productService.updateProduct(id,request)
+        );
+     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProduct( @PathVariable Long id){
+        productService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
+
+
     }
 
 }
