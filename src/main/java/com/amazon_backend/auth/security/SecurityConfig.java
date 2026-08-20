@@ -89,7 +89,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // Product Management for ADMIN Only
+                        // Category of product Management for ADMIN Only
                         .requestMatchers(HttpMethod.POST,"/api/categories/**")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT,"/api/categories/**")
@@ -105,16 +105,16 @@ public class SecurityConfig {
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**")
                         .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH,"/api/products/*/restock")
+                        .hasRole("ADMIN")
 
                         //Product/category viewing for users
                         .requestMatchers(HttpMethod.GET,"/api/products/**")
                         .authenticated()
                         .requestMatchers(HttpMethod.GET,"/api/categories/**")
                         .authenticated()
+
                         .anyRequest().authenticated()
-
-
-
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler((request, response, authentication) -> {
@@ -123,28 +123,13 @@ public class SecurityConfig {
 
                             String email = user.getAttribute("email");
                             String name = user.getAttribute("name");
-
-
                             User appUser = userRepository.findByEmail(email)
-//                                    .map(existingUser -> {
-//
-//                                   if(existingUser.getProvider().equals("LOCAL")) {
-//                                       try{
-//                                           response.sendError( HttpServletResponse.SC_BAD_REQUEST,"Please login with email and password");
-//                                       }catch(IOException e){
-//                                           throw new RuntimeException(e);
-//
-//                                       }
-//                                   }
-//                                        return existingUser;
-//                                    })
                                     .orElseGet(() -> {
                                         User newUser = new User();
                                         newUser.setEmail(email);
                                         newUser.setName(name);
                                         newUser.setPassword("");
                                         newUser.setRole(Role.USER);
-//                                        newUser.setProvider("GOOGLE");
                                         return userRepository.save(newUser);
                                     });
 

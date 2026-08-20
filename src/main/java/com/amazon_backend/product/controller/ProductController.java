@@ -1,15 +1,13 @@
 package com.amazon_backend.product.controller;
-
-
 import com.amazon_backend.product.dto.ProductRequest;
 import com.amazon_backend.product.dto.ProductResponse;
+import com.amazon_backend.product.dto.RestockRequest;
 import com.amazon_backend.product.dto.UpdateProductRequest;
 import com.amazon_backend.product.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -57,6 +55,16 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct( @PathVariable Long id){
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Restock Product Admin only
+    @PatchMapping("/{id}/restock")
+    public ResponseEntity<ProductResponse> restockProduct (
+            @PathVariable Long id,
+            @Valid @RequestBody RestockRequest request
+            ){
+            ProductResponse response = productService.restockProduct(id, request.getQuantity());
+            return  ResponseEntity.ok(response);
     }
 
 }

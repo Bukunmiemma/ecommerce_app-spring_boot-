@@ -108,4 +108,22 @@ return mapToProductResponse(savedProduct);
                 .orElseThrow( ()-> new ProductNotFoundException("Product not found")  );
         productRepository.delete(product);
     }
+
+    @Override
+    public ProductResponse restockProduct(Long id, Integer quantity) {
+
+        Product product = productRepository.findById(id)
+                .orElseThrow( ()-> new ProductNotFoundException("Product not found"));
+
+        if(quantity == null || quantity< 0){
+            throw new IllegalArgumentException("Restock quantity must be greater than zero");
+        }
+
+        int currentStock = product.getStockQuantity() ==null ? 0
+                : product.getStockQuantity();
+
+        product.setStockQuantity(currentStock + quantity);
+        Product updatedProduct = productRepository.save(product);
+        return mapToProductResponse(updatedProduct);
+    }
 }
