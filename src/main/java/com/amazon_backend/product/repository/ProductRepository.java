@@ -10,6 +10,7 @@ import java.util.Optional;
 
         Optional<Product> findByName(String name);
 
+
         boolean existsByName(String name);
 
     }
