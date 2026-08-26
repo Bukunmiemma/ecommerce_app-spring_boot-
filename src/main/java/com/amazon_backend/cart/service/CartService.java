@@ -14,5 +14,4 @@ public interface CartService {
     void removeCartItem (String email, Long itemId);
 
     void clearCart(String email);
-
 }
