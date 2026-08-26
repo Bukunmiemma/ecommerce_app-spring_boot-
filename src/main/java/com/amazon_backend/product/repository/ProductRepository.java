@@ -18,7 +18,7 @@ import java.util.Optional;
         //This is the solution to the concurrency problem
         //The DB prevents 2 people from buying when one product is left
         @Lock(LockModeType.PESSIMISTIC_WRITE)
-        @Query("SELECT p FROM Product p WHERE")
+        @Query("SELECT p FROM Product p WHERE p.id = :id")
         Optional<Product> findByIdForUpdate(@Param("id") Long id);
 
     }
