@@ -133,7 +133,8 @@ public class OrderServiceImpl implements OrderService{
         //save order and its order items
         Order savedOrder = orderRepository.save(order);
         //clear cart
-        cartItemRepository.deleteAll(cart.getItems());
+        cart.getItems().clear();
+        cartRepository.save(cart);
         return mapToOrderResponse(savedOrder);
 
     }

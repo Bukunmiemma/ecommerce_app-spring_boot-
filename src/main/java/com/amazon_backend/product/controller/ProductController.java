@@ -19,6 +19,7 @@ public class ProductController {
         this.productService = productService;
     }
 
+    // Create product
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct (
             @Valid @RequestBody
