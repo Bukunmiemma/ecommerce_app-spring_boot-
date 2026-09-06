@@ -3,19 +3,19 @@ package com.amazon_backend.order.dto;
 import java.math.BigDecimal;
 
 public class OrderItemResponse {
-    private Long id;
+    private Long orderItemId;
     private Long productId;
     private String productName;
     private Integer quantity;
     private BigDecimal price;
     private  BigDecimal subtotal;
 
-    public Long getId() {
-        return id;
+    public Long getOrderItemId() {
+        return orderItemId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setOrderItemId(Long orderItemId) {
+        this.orderItemId = orderItemId;
     }
 
     public Long getProductId() {

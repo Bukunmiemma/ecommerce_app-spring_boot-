@@ -13,6 +13,7 @@ import com.amazon_backend.order.entity.OrderStatus;
 import com.amazon_backend.order.repositories.OrderItemRepository;
 import com.amazon_backend.order.repositories.OrderRepository;
 import com.amazon_backend.product.entity.Product;
+import com.amazon_backend.product.exception.ForbiddenException;
 import com.amazon_backend.product.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,8 +51,9 @@ public class OrderServiceImpl implements OrderService{
 
     private OrderItemResponse mapToOrderItemResponse (OrderItem item){
         OrderItemResponse response = new OrderItemResponse();
-        response.setId(item.getId());
+        response.setOrderItemId(item.getId());
         response.setProductId(item.getProduct().getId());
+        response.setProductName(item.getProduct().getName());
         response.setQuantity(item.getQuantity());
         response.setPrice(item.getPrice());
         response.setSubtotal(item.getSubtotal());
@@ -74,6 +76,7 @@ public class OrderServiceImpl implements OrderService{
     }
     //@Transactional means all the database operations belong together,
     //either the whole business operation succeeds or the database should roll back the charges
+    //It helps to enforce and administer Atomicity
 
     //Override tells java this method is implementing/replacing a method that was already
     //declared in my parent class or interface. It also allows java/intellij catch mistakesz
@@ -151,7 +154,7 @@ public class OrderServiceImpl implements OrderService{
             .orElseThrow(()-> new RuntimeException("Order not found"));
              // Security check
         if(!order.getUser().getId().equals(user.getId())){
-            throw new RuntimeException("You are  not allowed to view this order");
+            throw new ForbiddenException("You are  not allowed to view this order");
         }
 return mapToOrderResponse(order);
     }

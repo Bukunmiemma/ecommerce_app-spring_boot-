@@ -1,19 +1,20 @@
 package com.amazon_backend.globalexception;
 import com.amazon_backend.category.exception.CategoryAlreadyExistException;
 import com.amazon_backend.category.exception.CategoryNotFoundException;
+import com.amazon_backend.product.exception.ForbiddenException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
     //Handle validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>>
@@ -90,6 +91,17 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+      // Handle forbidden access
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbiddenException(
+            ForbiddenException ex, HttpServletRequest request) {
 
+        ErrorResponse error = new ErrorResponse(LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),HttpStatus.FORBIDDEN.getReasonPhrase(),
+                ex.getMessage(), request.getRequestURI()
+                );
+        return new  ResponseEntity<>( error,
+                HttpStatus.FORBIDDEN);
+    }
 }
 
