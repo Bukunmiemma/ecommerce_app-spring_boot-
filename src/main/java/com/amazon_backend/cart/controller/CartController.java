@@ -48,17 +48,17 @@ Authentication authentication){
               @PathVariable Long itemId,
               Authentication authentication ){
           String email = authentication.getName();
+          cartService.removeCartItem(email, itemId);
+
           return ResponseEntity.noContent().build();
       }
       // Clear entire cart
       @DeleteMapping
       public ResponseEntity<Void> clearCart(
-              @PathVariable Long itemId,
 
               Authentication authentication){
           String email = authentication.getName();
              cartService.clearCart(email);
-          cartService.removeCartItem(email, itemId);
 
           return  ResponseEntity.noContent().build();
       }
