@@ -1,16 +1,14 @@
 package com.amazon_backend.cart.entity;
-
 import com.amazon_backend.product.entity.Product;
 import jakarta.persistence.*;
 
-import java.util.Locale;
 
 @Entity
 @Table(name= "cart_items",
         uniqueConstraints = {
         @UniqueConstraint(columnNames =
-                {"cart_id","product_id"})}
-
+                {"cart_id","product_id"})
+        }
         )
 public class CartItem {
 

@@ -1,9 +1,8 @@
 package com.amazon_backend.product.dto;
-
 import jakarta.validation.constraints.*;
-
 import java.math.BigDecimal;
 import java.util.Set;
+
 
 public class ProductRequest {
 

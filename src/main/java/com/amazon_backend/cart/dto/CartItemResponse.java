@@ -4,19 +4,19 @@ import java.math.BigDecimal;
 
 public class CartItemResponse {
 
-    private Long id;
+    private Long cartItemId;
     private Long productId;
     private String productName;
     private BigDecimal price;
     private Integer quantity;
     private BigDecimal subtotal;
 
-    public Long getId() {
-        return id;
+    public Long getCartItemId() {
+        return cartItemId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setCartItemId(Long cartItemId) {
+        this.cartItemId = cartItemId;
     }
 
     public Long getProductId() {

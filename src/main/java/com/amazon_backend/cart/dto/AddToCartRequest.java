@@ -2,6 +2,7 @@ package com.amazon_backend.cart.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
+
 public class AddToCartRequest {
     @NotNull(message = "Product ID is required")
     private Long productId;
