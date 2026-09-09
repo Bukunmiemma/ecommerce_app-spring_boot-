@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Set;
 
 public class ProductResponse {
-    private Long id;
+    private Long productId;
     private String name;
     private String description;
     private BigDecimal price;
@@ -14,12 +14,12 @@ public class ProductResponse {
     public ProductResponse() {
     }
 
-    public Long getId() {
-        return id;
+    public Long getProductId() {
+        return productId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setProductId(Long productId) {
+        this.productId = productId;
     }
 
     public String getName() {

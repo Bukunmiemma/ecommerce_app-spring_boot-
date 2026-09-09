@@ -1,22 +1,31 @@
 package com.amazon_backend.category.dto;
 
 public class CategoryResponse {
-    private Long id;
+    private Long categoryId;
     private String name;
 
     public CategoryResponse() {
     }
 
-    public CategoryResponse(Long id, String name) {
-        this.id = id;
+    public CategoryResponse(Long categoryId, String name) {
+        this.categoryId = categoryId;
         this.name = name;
     }
 
-    public Long getId() {
-        return id;
+    public Long getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
     }
 
     public String getName() {
         return name;
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 }
+

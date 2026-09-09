@@ -31,7 +31,7 @@ public class ProductServiceImpl implements ProductService {
     private ProductResponse mapToProductResponse (Product product){
         ProductResponse response = new ProductResponse();
 
-        response.setId(product.getId());
+        response.setProductId(product.getId());
         response.setName(product.getName());
         response.setDescription(product.getDescription());
         response.setPrice(product.getPrice());

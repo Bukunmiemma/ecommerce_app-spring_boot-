@@ -25,10 +25,11 @@ public class CartController {
 
       //Add product to cart
       @PostMapping("/items")
-      public ResponseEntity<CartResponse> addToCart(@RequestBody
-                                                    AddToCartRequest request,
-                                                    Authentication authentication
-                                                    ){
+      public ResponseEntity<CartResponse> addToCart(
+              @RequestBody
+              AddToCartRequest request,
+              Authentication authentication
+      ){
         String email = authentication.getName();
           return ResponseEntity.ok(cartService.addToCart(email, request));
 
