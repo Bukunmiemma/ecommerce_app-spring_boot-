@@ -24,7 +24,7 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private OrderStatus Status;
+    private OrderStatus status;
 
     @Column(nullable = false)
     private BigDecimal totalAmount;
@@ -55,11 +55,11 @@ public class Order {
     }
 
     public OrderStatus getStatus() {
-        return Status;
+        return status;
     }
 
     public void setStatus(OrderStatus status) {
-        Status = status;
+        this.status = status;
     }
 
     public BigDecimal getTotalAmount() {
