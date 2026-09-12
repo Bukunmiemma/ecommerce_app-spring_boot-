@@ -1,6 +1,5 @@
 package com.amazon_backend.payment.entity;
 import com.amazon_backend.order.entity.Order;
-import com.amazon_backend.order.entity.OrderStatus;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -18,7 +17,7 @@ public class Payment {
     @JoinColumn(name= "order_id", nullable = false,unique = true)
     private Order order;
 
-//This will be our transaction reference sent to paystack
+    //This will be our transaction reference sent to paystack
     //Paystack's initialize Transaction API accepts a unique reference
     //and returns the reference along with the checkout URL and access code
     @Column(nullable = false,unique = true)
@@ -34,6 +33,8 @@ public class Payment {
     //The conversion will be done in the Paystack service not in the database
     @Column(nullable = false)
     private BigDecimal amount;
+    @Column(nullable = false)
+    private String currency;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,unique = true)
@@ -82,6 +83,14 @@ public class Payment {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 
     public PaymentStatus getStatus() {
