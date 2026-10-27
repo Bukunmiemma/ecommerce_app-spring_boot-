@@ -33,6 +33,7 @@ public class Payment {
     //The conversion will be done in the Paystack service not in the database
     @Column(nullable = false)
     private BigDecimal amount;
+
     @Column(nullable = false)
     private String currency;
 
