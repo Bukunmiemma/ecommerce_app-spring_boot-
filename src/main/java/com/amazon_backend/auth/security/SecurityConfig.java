@@ -5,6 +5,7 @@ import com.amazon_backend.auth.repository.UserRepository;
 import com.amazon_backend.auth.service.CustomUserDetailsService;
 import com.amazon_backend.auth.service.JwtService;
 import com.amazon_backend.auth.service.RefreshTokenService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -78,6 +80,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .exceptionHandling(exception -> exception
+                        .defaultAuthenticationEntryPointFor(
+                                (request, response, authException) ->
+                                        response.sendError(
+                                                HttpServletResponse.SC_UNAUTHORIZED,
+                                                "Unauthorized"
+                                        ),
+                                PathPatternRequestMatcher.withDefaults()
+                                        .matcher("/api/**")
+                        )
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**",
