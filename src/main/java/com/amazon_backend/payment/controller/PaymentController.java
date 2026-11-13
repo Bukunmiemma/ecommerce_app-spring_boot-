@@ -5,10 +5,7 @@ import com.amazon_backend.payment.dto.PaymentInitializeResponse;
 import com.amazon_backend.payment.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -20,6 +17,7 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
+    //Receives the order ID and asks Paystack to initialize payment.
     @PostMapping("/initialize")
     public ResponseEntity<PaymentInitializeResponse> initializePayment(
             @RequestBody PaymentInitializeRequest request,
@@ -32,4 +30,22 @@ public class PaymentController {
 
         return ResponseEntity.ok(response);
     }
+
+    //Uses the authenticated customer's email and transaction reference to initiate server-side verification.
+    @PostMapping("/verify/{reference}")
+    public ResponseEntity<String> verifyPayment(
+            @PathVariable String reference,
+            Authentication authentication) {
+
+        paymentService.verifyPayment(
+                authentication.getName(),
+                reference
+        );
+
+        return ResponseEntity.ok(
+                "Payment verified successfully"
+        );
+    }
+
+
 }

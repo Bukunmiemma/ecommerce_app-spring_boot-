@@ -10,6 +10,8 @@ public class ProductResponse {
     private BigDecimal price;
     private Integer StockQuantity;
     private Set<String> categories;
+    private Long storeId;
+    private String storeName;
 
     public ProductResponse() {
     }
@@ -60,5 +62,21 @@ public class ProductResponse {
 
     public void setCategories(Set<String> categories) {
         this.categories = categories;
+    }
+
+    public Long getStoreId() {
+        return storeId;
+    }
+
+    public void setStoreId(Long storeId) {
+        this.storeId = storeId;
+    }
+
+    public String getStoreName() {
+        return storeName;
+    }
+
+    public void setStoreName(String storeName) {
+        this.storeName = storeName;
     }
 }

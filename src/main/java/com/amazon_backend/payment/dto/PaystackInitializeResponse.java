@@ -1,5 +1,7 @@
 package com.amazon_backend.payment.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 //Paystack response to our backend
 public class PaystackInitializeResponse {
     private boolean status;
@@ -34,24 +36,28 @@ public class PaystackInitializeResponse {
 
     public static class Data {
 
-        private String authorization_url;
-        private String access_code;
+        @JsonProperty("authorization_url")
+        private String authorizationUrl;
+
+        @JsonProperty("access_code")
+        private String accessCode;
+
         private String reference;
 
-        public String getAuthorization_url() {
-            return authorization_url;
+        public String getAuthorizationUrl() {
+            return authorizationUrl;
         }
 
-        public void setAuthorization_url(String authorization_url) {
-            this.authorization_url = authorization_url;
+        public void setAuthorizationUrl(String authorizationUrl) {
+            this.authorizationUrl = authorizationUrl;
         }
 
-        public String getAccess_code() {
-            return access_code;
+        public String getAccessCode() {
+            return accessCode;
         }
 
-        public void setAccess_code(String access_code) {
-            this.access_code = access_code;
+        public void setAccessCode(String accessCode) {
+            this.accessCode = accessCode;
         }
 
         public String getReference() {
@@ -90,4 +96,17 @@ public class PaystackInitializeResponse {
 //             PaymentInitializeResponse
 //                         │
 //                         ▼
-//                      Flutter
+//
+//                     Flutter
+
+//File	Purpose
+//PaystackConfig.java	Configures Paystack HTTP communication
+//PaymentController.java	Exposes payment endpoints
+//PaymentService.java	Payment service interface
+//PaymentServiceImpl.java	Payment initialization logic
+//PaymentInitializeRequest.java	Request from Flutter
+//PaymentInitializeResponse.java	Response to Flutter
+//PaystackInitializeRequest.java	Request sent to Paystack
+//PaystackInitializeResponse.java	Response received from Paystack
+//Payment.java	Stores payment records
+//PaymentRepository.java	Payment database operations

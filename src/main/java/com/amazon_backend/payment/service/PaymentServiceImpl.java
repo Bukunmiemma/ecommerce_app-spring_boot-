@@ -1,126 +1,62 @@
 package com.amazon_backend.payment.service;
-import com.amazon_backend.auth.entity.User;
-import com.amazon_backend.auth.repository.UserRepository;
-import com.amazon_backend.order.entity.Order;
-import com.amazon_backend.order.entity.OrderStatus;
-import com.amazon_backend.order.repositories.OrderRepository;
-import com.amazon_backend.payment.dto.PaymentInitializeRequest;
-import com.amazon_backend.payment.dto.PaymentInitializeResponse;
-import com.amazon_backend.payment.dto.PaystackInitializeRequest;
-import com.amazon_backend.payment.dto.PaystackInitializeResponse;
-import com.amazon_backend.payment.entity.Payment;
-import com.amazon_backend.payment.entity.PaymentStatus;
-import com.amazon_backend.payment.repository.PaymentRepository;
+import com.amazon_backend.payment.dto.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
-
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 public class PaymentServiceImpl implements PaymentService {
-    private final PaymentRepository paymentRepository;
-    private final OrderRepository orderRepository;
-    private final UserRepository userRepository;
+
+    private final PaymentPreparationService paymentPreparationService;
     private final RestClient paystackRestClient;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository,
-                              OrderRepository orderRepository,
-                              UserRepository userRepository,
-                              RestClient paystackRestClient) {
-        this.paymentRepository = paymentRepository;
-        this.orderRepository = orderRepository;
-        this.userRepository = userRepository;
+    public PaymentServiceImpl(
+            PaymentPreparationService paymentPreparationService,
+            RestClient paystackRestClient
+    ) {
+        this.paymentPreparationService = paymentPreparationService;
         this.paystackRestClient = paystackRestClient;
     }
+
     @Override
-    @Transactional
     public PaymentInitializeResponse initializePayment(
             String email,
-            PaymentInitializeRequest request) {
+            PaymentInitializeRequest request
+    ) {
 
-        // 1. Find the authenticated user
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // 2. Find the order
-        Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        // 3. Make sure the order belongs to this user
-        if (!order.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException(
-                    "You are not authorized to pay for this order"
-            );
-        }
-
-        // 4. Only pending orders can be paid for
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new RuntimeException(
-                    "Order is not available for payment"
-            );
-        }
-
-        // 5. Check whether this order already has a payment
-        Payment existingPayment = paymentRepository
-                .findByOrderId(order.getId())
-                .orElse(null);
-
-        if (existingPayment != null) {
-
-            if (existingPayment.getStatus() == PaymentStatus.SUCCESS) {
-                throw new RuntimeException(
-                        "Order has already been paid for"
+        // 1. Prepare payment inside a database transaction
+        PaymentPreparationResult preparation =
+                paymentPreparationService.preparePayment(
+                        email,
+                        request.getOrderId()
                 );
-            }
 
-            PaymentInitializeResponse response =
-                    new PaymentInitializeResponse();
+        // 2. If authorization details already exist, reuse them
+        if (preparation.authorizationUrl() != null
+                && preparation.accessCode() != null) {
 
-            response.setReference(existingPayment.getReference());
-
-            return response;
+            return buildResponse(
+                    preparation.authorizationUrl(),
+                    preparation.accessCode(),
+                    preparation.reference()
+            );
         }
 
-        // 6. Get the trusted amount directly from the order
-        BigDecimal amount = order.getTotalAmount();
-
-        // 7. Currency for our current Nigerian store
-        String currency = "NGN";
-
-        // 8. Generate a unique payment reference
-        String reference =
-                "ORDER-" + order.getId() + "-" + UUID.randomUUID();
-
-        // 9. Create our Payment record
-        Payment payment = new Payment();
-
-        payment.setOrder(order);
-        payment.setReference(reference);
-        payment.setIdempotencyKey(UUID.randomUUID().toString());
-        payment.setAmount(amount);
-        payment.setCurrency(currency);
-        payment.setStatus(PaymentStatus.PENDING);
-        payment.setCreatedAt(LocalDateTime.now());
-        payment.setUpdatedAt(LocalDateTime.now());
-
-        // 10. Convert Naira to Kobo
-        long amountInKobo = amount
+        // 3. Convert Naira to Kobo
+        long amountInKobo = preparation.amount()
                 .multiply(BigDecimal.valueOf(100))
                 .longValueExact();
 
-        // 11. Build Paystack request
+        // 4. Build Paystack request
         PaystackInitializeRequest paystackRequest =
                 new PaystackInitializeRequest();
 
         paystackRequest.setAmount(amountInKobo);
-        paystackRequest.setEmail(user.getEmail());
-        paystackRequest.setReference(reference);
-        paystackRequest.setCurrency(currency);
+        paystackRequest.setEmail(preparation.email());
+        paystackRequest.setReference(preparation.reference());
+        paystackRequest.setCurrency(preparation.currency());
 
-        // 12. Send request to Paystack
+        // 5. Communicate with Paystack
         PaystackInitializeResponse paystackResponse =
                 paystackRestClient
                         .post()
@@ -129,7 +65,7 @@ public class PaymentServiceImpl implements PaymentService {
                         .retrieve()
                         .body(PaystackInitializeResponse.class);
 
-        // 13. Check Paystack response
+        // 6. Validate Paystack response
         if (paystackResponse == null
                 || !paystackResponse.isStatus()
                 || paystackResponse.getData() == null) {
@@ -139,25 +75,251 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        // 14. Save payment only after Paystack accepts initialization
-        paymentRepository.save(payment);
+        var data = paystackResponse.getData();
 
-        // 15. Prepare response for Flutter
+        if (data.getAuthorizationUrl() == null
+                || data.getAuthorizationUrl().isBlank()
+                || data.getAccessCode() == null
+                || data.getAccessCode().isBlank()
+                || data.getReference() == null
+                || !preparation.reference().equals(data.getReference())) {
+
+            throw new RuntimeException(
+                    "Invalid response received from Paystack"
+            );
+        }
+
+        // 7. Save authorization details in a separate transaction
+        //Why is this important?
+        //When Paystack responds, our backend must prove that the
+        // request saving the authorization details still owns the
+        // initialization lease. This token provides that check
+
+        paymentPreparationService.saveAuthorizationDetails(
+                preparation.reference(),
+                preparation.initializationLeaseToken(),
+                data.getAuthorizationUrl(),
+                data.getAccessCode()
+
+                );
+
+        // 8. Return payment details to Flutter
+        return buildResponse(
+                data.getAuthorizationUrl(),
+                data.getAccessCode(),
+                data.getReference()
+        );
+    }
+
+
+    @Override
+    public void verifyPayment(String email, String reference) {
+
+        // 1. Validate payment reference
+        if (reference == null || reference.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Payment reference is required");
+        }
+
+        // 2. Ask Paystack to verify the transaction
+        PaystackVerifyResponse response = paystackRestClient
+                .get()
+                .uri("/transaction/verify/{reference}", reference)
+                .retrieve()
+                .body(PaystackVerifyResponse.class);
+
+        // 3. Validate Paystack response
+        if (response == null
+                || !response.isStatus()
+                || response.getData() == null) {
+
+            throw new RuntimeException(
+                    "Unable to verify payment with Paystack");
+        }
+
+        PaystackVerifyResponse.Data data = response.getData();
+
+        // 4. Validate transaction reference
+        if (!reference.equals(data.getReference())) {
+            throw new RuntimeException(
+                    "Paystack transaction reference mismatch");
+        }
+
+        // 5. Validate customer information
+        if (data.getCustomer() == null
+                || data.getCustomer().getEmail() == null
+                || data.getCustomer().getEmail().isBlank()) {
+
+            throw new RuntimeException(
+                    "Paystack customer information is missing");
+        }
+
+        // 6. Read Paystack transaction status
+        String paymentStatus = data.getStatus();
+
+        if (paymentStatus == null || paymentStatus.isBlank()) {
+            throw new RuntimeException(
+                    "Paystack transaction status is missing");
+        }
+
+        // 7. Handle successful payment
+        if ("success".equalsIgnoreCase(paymentStatus)) {
+
+            paymentPreparationService.confirmSuccessfulPayment(
+                    email,
+                    data.getReference(),
+                    data.getAmount(),
+                    data.getCurrency(),
+                    data.getCustomer().getEmail()
+            );
+
+            return;
+        }
+
+        // 8. Handle genuinely failed payment
+        if ("failed".equalsIgnoreCase(paymentStatus)) {
+
+            paymentPreparationService.confirmFailedPayment(
+                    email,
+                    data.getReference(),
+                    data.getAmount(),
+                    data.getCurrency(),
+                    data.getCustomer().getEmail()
+            );
+
+            return;
+        }
+
+        // 9. Do not cancel orders for pending or unknown statuses
+        if ("pending".equalsIgnoreCase(paymentStatus)) {
+
+            throw new RuntimeException(
+                    "Payment is still pending with Paystack");
+        }
+
+        throw new RuntimeException(
+                "Payment cannot be processed. Paystack status: "
+                        + paymentStatus);
+
+        //We are not restoring stock for pending transactions.
+        //A pending transaction isn't necessarily a failed transaction.
+        //Also, Paystack's abandoned status is not automatically treated as a confirmed failure.
+        // We'll handle expiration and abandoned payments separately.
+    }
+
+
+    public void verifyPaymentForExpiration(String reference) {
+
+        if (reference == null || reference.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Payment reference is required");
+        }
+
+        // Ask Paystack for the actual transaction status.
+        PaystackVerifyResponse response = paystackRestClient
+                .get()
+                .uri("/transaction/verify/{reference}", reference)
+                .retrieve()
+                .body(PaystackVerifyResponse.class);
+
+        if (response == null
+                || !response.isStatus()
+                || response.getData() == null) {
+
+            throw new RuntimeException(
+                    "Unable to verify payment with Paystack");
+        }
+
+        PaystackVerifyResponse.Data data = response.getData();
+
+        if (!reference.equals(data.getReference())) {
+            throw new RuntimeException(
+                    "Payment reference mismatch");
+        }
+
+        if (data.getCustomer() == null
+                || data.getCustomer().getEmail() == null) {
+
+            throw new RuntimeException(
+                    "Paystack customer information is missing");
+        }
+
+        String status = data.getStatus();
+
+        if (status == null || status.isBlank()) {
+            throw new RuntimeException(
+                    "Paystack transaction status is missing");
+        }
+
+        // Payment succeeded.
+        if ("success".equalsIgnoreCase(status)) {
+
+            paymentPreparationService.confirmSuccessfulPayment(
+                    data.getCustomer().getEmail(),
+                    data.getReference(),
+                    data.getAmount(),
+                    data.getCurrency(),
+                    data.getCustomer().getEmail()
+            );
+
+            return;
+        }
+
+        // Payment genuinely failed.
+        if ("failed".equalsIgnoreCase(status)) {
+
+            paymentPreparationService.confirmFailedPayment(
+                    data.getCustomer().getEmail(),
+                    data.getReference(),
+                    data.getAmount(),
+                    data.getCurrency(),
+                    data.getCustomer().getEmail()
+            );
+
+            return;
+        }
+
+        // Customer abandoned the transaction.
+        if ("abandoned".equalsIgnoreCase(status)) {
+
+            paymentPreparationService.confirmExpiredPayment(
+                    data.getCustomer().getEmail(),
+                    data.getReference(),
+                    data.getAmount(),
+                    data.getCurrency(),
+                    data.getCustomer().getEmail()
+            );
+
+            return;
+        }
+
+        // Pending, processing, ongoing or unknown:
+        // Do not release inventory.
+    }
+
+    private PaymentInitializeResponse buildResponse(
+            String authorizationUrl,
+            String accessCode,
+            String reference
+    ) {
+
         PaymentInitializeResponse response =
                 new PaymentInitializeResponse();
 
-        response.setAuthorizationUrl(
-                paystackResponse.getData().getAuthorization_url()
-        );
-
-        response.setAccessCode(
-                paystackResponse.getData().getAccess_code()
-        );
-
-        response.setReference(
-                paystackResponse.getData().getReference()
-        );
+        response.setAuthorizationUrl(authorizationUrl);
+        response.setAccessCode(accessCode);
+        response.setReference(reference);
 
         return response;
     }
 }
+//Your PaymentPreparationService is saving the payment reference and updating the order.
+//Your PaymentServiceImpl is receiving the authorization URL and access code from Paystack
+
+//Our payment initialization flow will be:
+//1. Prepare payment and reserve initialization ownership.
+//2. Contact Paystack.
+//3. Validate Paystack's response.
+//4. Verify the initialization token.
+//5. Save the authorization URL and access code.
+//6. Return the payment details to Flutter.

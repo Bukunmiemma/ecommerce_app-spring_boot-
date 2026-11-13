@@ -3,7 +3,7 @@ package com.amazon_backend.payment.dto;
 import java.util.Map;
 
 //This is strictly for communication between our spring boot backend and paystack
-
+//Request sent to paystack
 public class PaystackInitializeRequest {
 //Why Long amount instead of BigDecimal? Your database stores:
 //₦1,200,000.00 as a BigDecimal.But Paystack expects the amount in the currency's subunit.

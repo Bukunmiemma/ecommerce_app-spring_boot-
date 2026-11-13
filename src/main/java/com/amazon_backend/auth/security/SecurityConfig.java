@@ -37,9 +37,6 @@ public class SecurityConfig {
     private final RefreshTokenService  refreshTokenService;
 
 
-
-
-
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           CustomUserDetailsService userDetailsService, UserRepository userRepository, JwtService jwtService, RefreshTokenService refreshTokenService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
@@ -49,7 +46,6 @@ public class SecurityConfig {
 
         this.refreshTokenService = refreshTokenService;
     }
-
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
@@ -111,23 +107,46 @@ public class SecurityConfig {
                         .hasRole("ADMIN")
 
 
-                        // Product Management for ADMIN Only
-                        .requestMatchers(HttpMethod.POST,"/api/products/**")
-                        .hasRole("ADMIN")
+                        // Product Management for authenticated vendors of their respective store
+                        .requestMatchers(HttpMethod.POST,"/api/products/store/*")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.PUT, "/api/products/**")
-                        .hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/products/**")
-                        .hasRole("ADMIN")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/*")
+                        .authenticated()
+
                         .requestMatchers(HttpMethod.PATCH,"/api/products/*/restock")
-                        .hasRole("ADMIN")
+                        .authenticated()
 
                         //Product/category viewing for users
-                        .requestMatchers(HttpMethod.GET,"/api/products/**")
-                        .authenticated()
-                        .requestMatchers(HttpMethod.GET,"/api/categories/**")
-                        .authenticated()
+                                // A user's private store list requires authentication.
+                      // IMPORTANT: This must come before the public store matcher.
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/stores/getStores"
+                                ).authenticated()
 
-                        .anyRequest().authenticated()
+                         // Public store discovery.
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/stores/**"
+                                ).permitAll()
+
+                       // Public product browsing.
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/products/**"
+                                ).permitAll()
+
+                     // Public category browsing.
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/categories/**"
+                                ).permitAll()
+
+                                .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler((request, response, authentication) -> {
@@ -146,7 +165,6 @@ public class SecurityConfig {
                                         return userRepository.save(newUser);
                                     });
 
-                            String jwt = jwtService.generateToken(appUser);
                             String accessToken = jwtService.generateToken(appUser);
                             String refreshToken = refreshTokenService.createRefreshToken(email).getToken();
 

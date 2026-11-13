@@ -1,5 +1,6 @@
 package com.amazon_backend.payment.dto;
 
+//Response to flutter
 public class PaymentInitializeResponse {
     private String authorizationUrl;
     private String accessCode;

@@ -6,11 +6,15 @@ import com.amazon_backend.store.dto.StoreResponse;
 import java.util.List;
 
 public interface StoreService {
+
     StoreResponse createStore(
             String email,
             CreateStoreRequest request
     );
 
     List<StoreResponse> getMyStores(String email);
+    List<StoreResponse> getActiveStores();
+
+    StoreResponse getActiveStoreById(Long storeId);
 
 }

@@ -5,6 +5,7 @@ import com.amazon_backend.store.dto.StoreResponse;
 import com.amazon_backend.store.service.StoreService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,6 +38,22 @@ public class StoreController {
     ) {
         return storeService.getMyStores(
                 authentication.getName()
+        );
+    }
+
+    @GetMapping
+    public ResponseEntity<List<StoreResponse>> getActiveStores() {
+
+        return ResponseEntity.ok(storeService.getActiveStores());
+    }
+
+    @GetMapping("/{storeId}")
+    public ResponseEntity<StoreResponse> getActiveStoreById(
+            @PathVariable Long storeId
+    ) {
+
+        return ResponseEntity.ok(
+                storeService.getActiveStoreById(storeId)
         );
     }
 }

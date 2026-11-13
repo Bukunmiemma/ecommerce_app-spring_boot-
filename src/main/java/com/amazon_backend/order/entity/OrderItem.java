@@ -1,6 +1,10 @@
 package com.amazon_backend.order.entity;
 import com.amazon_backend.product.entity.Product;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -20,12 +24,18 @@ public class OrderItem {
     @JoinColumn(name= "product_id", nullable = false)
     private Product product;
 
+
+    @NotNull
+    @Min(1)
     @Column(nullable = false)
     private Integer quantity;
 
-    @Column(nullable = false)
+
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
 
+    @NotNull
+    @DecimalMin("0.01")
     @Column(nullable = false)
     private BigDecimal subtotal;
 
@@ -77,3 +87,11 @@ public class OrderItem {
         this.subtotal = subtotal;
     }
 }
+
+//Each order item stores:
+//- The associated order.
+//- The associated product.
+//- The quantity purchased.
+//- The historical purchase price.
+//- The subtotal.
+//This means we can restore stock using the product ID and quantity recorded at checkout.

@@ -32,3 +32,8 @@ public class PaystackConfig {
         }
     }
 
+    //1. Reads your secret key from application properties.
+//2. Configures Paystack's API base URL.
+//3. Automatically attaches your authorization header to requests.
+//4. Makes the RestClient available for dependency injection.
+//We're using Spring's RestClient for synchronous HTTP communication.

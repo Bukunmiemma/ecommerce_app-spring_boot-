@@ -43,3 +43,7 @@ public class Cart {
         this.items = items;
     }
 }
+
+//Your cart now has two layers of protection:
+//1. User-row locking: prevents simultaneous first-time cart creation for the same user.
+//2. Cart-row locking: serializes cart modifications and checkout operations for an existing cart.

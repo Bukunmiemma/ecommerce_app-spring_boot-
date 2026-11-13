@@ -23,6 +23,15 @@ public class Payment {
     @Column(nullable = false,unique = true)
     private  String reference;
 
+    //The authorization URL is for resuming checkout, not proof of payment. We will still verify every transaction directly with Paystack.
+    @Column(length = 1000)
+    private String authorizationUrl;
+
+    // Identifies the initialized checkout session for Paystack's checkout integrations.
+    //Paystack generates this code when it initializes a transaction.
+    @Column(length = 255)
+    private String accessCode;
+
     //This protects our payment initialization against duplicate requests
     @Column(nullable = false,unique = true)
     private  String idempotencyKey;
@@ -38,13 +47,26 @@ public class Payment {
     private String currency;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false,unique = true)
+    @Column(nullable = false)
     private  PaymentStatus status;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    //The backend claims the initialization lease.
+    //Another simultaneous request sees that initialization is already in progress.
+    //It doesn't independently send another initialization request.
+    //When initialization finishes, we release the lease.
+    //If the server crashes, the lease eventually expires.
+    @Column
+    private LocalDateTime initializationLeaseUntil;
+
+    @Column(length = 100)
+    private String initializationLeaseToken;
+
+
 
     public Long getPaymentId() {
         return paymentId;
@@ -69,6 +91,21 @@ public class Payment {
     public void setReference(String reference) {
         this.reference = reference;
     }
+
+    public String getAuthorizationUrl() {return authorizationUrl;}
+
+    public void setAuthorizationUrl(String authorizationUrl) {
+        this.authorizationUrl = authorizationUrl;
+    }
+
+    public String getAccessCode() {
+        return accessCode;
+    }
+
+    public void setAccessCode(String accessCode) {
+        this.accessCode = accessCode;
+    }
+
 
     public String getIdempotencyKey() {
         return idempotencyKey;
@@ -117,4 +154,24 @@ public class Payment {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public LocalDateTime getInitializationLeaseUntil() {
+        return initializationLeaseUntil;
+    }
+
+    public void setInitializationLeaseUntil(LocalDateTime initializationLeaseUntil) {
+        this.initializationLeaseUntil = initializationLeaseUntil;
+    }
+
+    public String getInitializationLeaseToken() {
+        return initializationLeaseToken;
+    }
+
+    public void setInitializationLeaseToken(String initializationLeaseToken) {
+        this.initializationLeaseToken = initializationLeaseToken;
+    }
+//Authorization URL = Where payment happens.
+    //Access Code = Checkout session identifier.
+    //Reference = Transaction identifier used to verify payment.
+
 }

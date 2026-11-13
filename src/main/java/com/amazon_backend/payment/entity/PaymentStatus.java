@@ -6,3 +6,4 @@ public enum PaymentStatus {
     FAILED,
     CANCELLED
 }
+//This tracks the Paystack transaction itself.

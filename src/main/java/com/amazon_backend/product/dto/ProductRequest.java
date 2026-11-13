@@ -24,6 +24,8 @@ public class ProductRequest {
     @NotEmpty(message = "At least one category is required")
     private Set<Long> categoryIds;
 
+
+
     public ProductRequest() {
     }
 
@@ -66,4 +68,6 @@ public class ProductRequest {
     public void setCategoryIds(Set<Long> categoryIds) {
         this.categoryIds = categoryIds;
     }
+
+
 }

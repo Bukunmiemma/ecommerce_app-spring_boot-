@@ -10,6 +10,7 @@ public class CartItemResponse {
     private BigDecimal price;
     private Integer quantity;
     private BigDecimal subtotal;
+    private boolean available;
 
     public Long getCartItemId() {
         return cartItemId;
@@ -57,5 +58,13 @@ public class CartItemResponse {
 
     public void setSubtotal(BigDecimal subtotal) {
         this.subtotal = subtotal;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
     }
 }

@@ -1,6 +1,6 @@
 package com.amazon_backend.payment.dto;
 
-
+//Request from the flutter app
 public class PaymentInitializeRequest {
     private Long orderId;
 

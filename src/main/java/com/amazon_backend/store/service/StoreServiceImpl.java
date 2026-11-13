@@ -1,10 +1,10 @@
 package com.amazon_backend.store.service;
-
 import com.amazon_backend.auth.entity.User;
 import com.amazon_backend.auth.repository.UserRepository;
 import com.amazon_backend.store.dto.CreateStoreRequest;
 import com.amazon_backend.store.dto.StoreResponse;
 import com.amazon_backend.store.entity.Store;
+import com.amazon_backend.store.entity.StoreStatus;
 import com.amazon_backend.store.repositories.StoreRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -80,4 +80,27 @@ public class StoreServiceImpl implements StoreService {
         return response;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<StoreResponse> getActiveStores() {
+
+        return storeRepository.findByStatus(StoreStatus.ACTIVE)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StoreResponse getActiveStoreById(Long storeId) {
+
+        Store store = storeRepository
+                .findByIdAndStatus(storeId, StoreStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Store not found"
+                ));
+
+        return mapToResponse(store);
+    }
 }
