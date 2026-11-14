@@ -52,14 +52,12 @@ public class OrderServiceImpl implements OrderService {
     private OrderItemResponse mapToOrderItemResponse(OrderItem item) {
 
         OrderItemResponse response = new OrderItemResponse();
-
         response.setOrderItemId(item.getId());
         response.setProductId(item.getProduct().getId());
         response.setProductName(item.getProduct().getName());
         response.setQuantity(item.getQuantity());
         response.setPrice(item.getPrice());
         response.setSubtotal(item.getSubtotal());
-
         return response;
     }
 
@@ -91,7 +89,14 @@ public class OrderServiceImpl implements OrderService {
 
         User lockedUser = userRepository.findByIdForUpdate(user.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        if (!lockedUser.isEmailVerified()) {
 
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN,
+                    "Please verify your email before placing an order"
+            );
+        }
         Cart cart = cartRepository.findByUserIdForUpdate(lockedUser.getId())
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
 

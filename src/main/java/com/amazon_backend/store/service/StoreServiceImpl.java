@@ -36,7 +36,14 @@ public class StoreServiceImpl implements StoreService {
                         HttpStatus.NOT_FOUND,
                         "User account not found"
                 ));
+        //This prevents unverified accounts from opening vendor stores.
+        if (!owner.isEmailVerified()) {
 
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Please verify your email before creating a store"
+            );
+        }
         Store store = new Store();
         store.setName(request.getName().trim());
         store.setDescription(request.getDescription());

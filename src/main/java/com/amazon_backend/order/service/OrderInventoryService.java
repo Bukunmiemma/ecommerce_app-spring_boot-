@@ -8,7 +8,6 @@ import com.amazon_backend.order.repositories.OrderRepository;
 import com.amazon_backend.product.entity.Product;
 import com.amazon_backend.product.repository.ProductRepository;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;

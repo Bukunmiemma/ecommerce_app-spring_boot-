@@ -16,7 +16,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +36,7 @@ public class AuthController {
     private final EmailService emailService;
     private final OtpService otpService;
     private final StringRedisTemplate stringRedisTemplate;
+    private final EmailVerificationService emailVerificationService;
 
 
     public AuthController(AuthService authService,
@@ -49,7 +49,8 @@ public class AuthController {
                           PasswordEncoder passwordEncoder,
                           EmailService emailService,
                           OtpService otpService,
-                          StringRedisTemplate stringRedisTemplate
+                          StringRedisTemplate stringRedisTemplate,
+                          EmailVerificationService emailVerificationService
 
 
     ) {
@@ -64,28 +65,53 @@ public class AuthController {
         this.emailService = emailService;
         this.otpService= otpService;
         this.stringRedisTemplate= stringRedisTemplate;
-
+        this.emailVerificationService= emailVerificationService;
     }
     @PostMapping("/signup")
-    public AuthResponse  signup(
+    public AuthResponse signup(
             @Valid @RequestBody SignupRequest request
     ) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()){
+
+        String email = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.findByEmail(email).isPresent()) {
             throw new RuntimeException("Email already exists");
         }
+
         User user = new User();
         user.setName(request.getName());
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.USER);
+        user.setEmailVerified(false);
+
         userRepository.save(user);
-        String jwt = jwtService.generateToken(user);
+
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = refreshTokenService.createRefreshToken(user.getEmail()).getToken();
-        UserResponse response = new UserResponse(user);
-        return new AuthResponse(  accessToken,
+
+        String refreshToken = refreshTokenService
+                .createRefreshToken(user.getEmail())
+                .getToken();
+
+        boolean verificationEmailSent = false;
+
+        try {
+            emailVerificationService.sendVerificationCode(email);
+            verificationEmailSent = true;
+
+        } catch (Exception e) {
+            System.err.println(
+                    "Unable to send signup verification email: " +
+                            e.getMessage()
+            );
+        }
+
+        return new AuthResponse(
+                accessToken,
                 refreshToken,
-                new UserResponse(user));
+                new UserResponse(user),
+                verificationEmailSent
+        );
     }
 
 
@@ -117,7 +143,55 @@ public class AuthController {
     return new AuthResponse(accessToken, refreshToken,new UserResponse(user));
 }
 
+    // SEND EMAIL VERIFICATION OTP
+    @PostMapping("/email-verification/send")
+    public ResponseEntity<?> sendEmailVerificationCode(
+            Authentication authentication
+    ) {
 
+        String email = authentication.getName();
+
+        emailVerificationService.sendVerificationCode(email);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "success", true,
+                        "message", "Verification code sent successfully"
+                )
+        );
+    }
+
+    // VERIFY EMAIL
+    @PostMapping("/email-verification/verify")
+    public ResponseEntity<?> verifyEmail(
+            Authentication authentication,
+            @Valid @RequestBody EmailVerificationRequest request
+    ) {
+
+        String email = authentication.getName();
+        boolean verified = emailVerificationService.verifyCode(
+                email,
+                request.getOtp()
+        );
+
+        if (!verified) {
+
+            return ResponseEntity.badRequest().body(
+                    Map.of(
+                            "success", false,
+                            "message", "Invalid or expired verification code"
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "success", true,
+                        "emailVerified", true,
+                        "message", "Email verified successfully"
+                )
+        );
+    }
      @PostMapping("/refresh")
     public  ResponseEntity<?> refresh(@RequestBody RefreshRequest request ){
         RefreshToken token = refreshTokenService.validateToken(request.getRefreshToken());
@@ -139,7 +213,8 @@ public class AuthController {
 
             String email = payload.getEmail();
             String name = (String) payload.get("name");
-
+            boolean googleEmailVerified =
+                    Boolean.TRUE.equals(payload.getEmailVerified());
             //  FIND OR CREATE USER
             User user = userRepository.findByEmail(email)
                     .orElseGet(() -> {
@@ -151,7 +226,10 @@ public class AuthController {
 //                        newUser.setProvider("GOOGLE");
                         return userRepository.save(newUser);
                     });
-
+            if (googleEmailVerified && !user.isEmailVerified()) {
+                user.setEmailVerified(true);
+                userRepository.save(user);
+            }
             //GENERATE JWT
             String accessToken = jwtService.generateToken(user);
 

@@ -26,6 +26,8 @@ public class User {
     @Column(nullable = false)
     private Role role = Role.USER;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
 
     public User() {
     }
@@ -77,6 +79,12 @@ public class User {
         this.role = role;
     }
 
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
 
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
 }
 

@@ -1,5 +1,4 @@
 package com.amazon_backend.product.service;
-
 import com.amazon_backend.category.entity.Category;
 import com.amazon_backend.category.exception.CategoryNotFoundException;
 import com.amazon_backend.category.repository.CategoryRepository;
@@ -17,7 +16,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -83,6 +81,13 @@ public class ProductServiceImpl implements ProductService {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Your store is not active and cannot publish products"
+            );
+        }
+        if (!store.getOwner().isEmailVerified()) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Please verify your email before publishing products"
             );
         }
 

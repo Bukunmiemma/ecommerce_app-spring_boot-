@@ -43,4 +43,42 @@ public class EmailService {
             e.printStackTrace();
         }
     }
+
+    // NEW EMAIL VERIFICATION EMAIL
+    public void sendEmailVerificationOtp(String email, String otp) {
+
+        try {
+
+            Resend resend = new Resend(apiKey);
+
+            CreateEmailOptions request = CreateEmailOptions.builder()
+                    .from("onboarding@resend.dev")
+                    .to(email)
+                    .subject("Verify Your Email Address")
+                    .html(
+                            "<div style='font-family:Arial,sans-serif;'>" +
+                                    "<h2>Welcome to our marketplace!</h2>" +
+                                    "<p>Thank you for creating an account.</p>" +
+                                    "<p>Use the verification code below to verify your email:</p>" +
+                                    "<h1 style='letter-spacing:8px;'>" + otp + "</h1>" +
+                                    "<p>This code expires in 5 minutes.</p>" +
+                                    "<p>If you did not create this account, you can ignore this email.</p>" +
+                                    "</div>"
+                    )
+                    .build();
+
+            resend.emails().send(request);
+
+            System.out.println("EMAIL VERIFICATION EMAIL SENT");
+
+        } catch (Exception e) {
+
+            System.out.println("EMAIL VERIFICATION ERROR: " + e.getMessage());
+
+            throw new IllegalStateException(
+                    "Unable to send verification email",
+                    e
+            );
+        }
+    }
 }

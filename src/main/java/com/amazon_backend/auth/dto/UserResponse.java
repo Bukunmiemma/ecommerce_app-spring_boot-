@@ -7,6 +7,7 @@ public class UserResponse {
     private String role;
     private Long id;
     private String name;
+    private boolean emailVerified;
 
 
     public UserResponse(  User user) {
@@ -14,6 +15,7 @@ public class UserResponse {
         this.role = user.getRole().name();
         this.id= user.getId();
         this.name = user.getName();
+        this.emailVerified = user.isEmailVerified();
 
     }
 
@@ -36,5 +38,13 @@ public class UserResponse {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
 }

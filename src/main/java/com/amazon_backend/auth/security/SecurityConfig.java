@@ -89,7 +89,15 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**",
+                        // Email verification requires an authenticated user.
+                        // These rules MUST come before /auth/**.
+                        .requestMatchers(
+                                "/auth/email-verification/**"
+                        ).authenticated()
+
+                        // Public authentication endpoints.
+                        .requestMatchers(
+                                "/auth/**",
                                 "/oauth2/**",
                                 "/login/**",
                                 "/error",
