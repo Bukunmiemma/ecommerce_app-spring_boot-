@@ -45,6 +45,18 @@ public class ProductServiceImpl implements ProductService {
                         "Product not found or you do not own this product"
                 ));
     }
+
+
+    private void requireVerifiedStoreOwner(Product product) {
+
+        if (!product.getStore().getOwner().isEmailVerified()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Please verify your email before managing products"
+            );
+        }
+    }
+
     private ProductResponse mapToProductResponse (Product product){
         ProductResponse response = new ProductResponse();
 
@@ -179,7 +191,7 @@ return mapToProductResponse(savedProduct);
             UpdateProductRequest request
     ) {
         Product product = getProductOwnedByUser(id, email);
-
+        requireVerifiedStoreOwner(product);
         // Check whether another product in this store uses the requested name
         productRepository.findByNameAndStoreId(
                 request.getName(),
@@ -217,6 +229,7 @@ return mapToProductResponse(savedProduct);
     public void deleteProduct(Long id, String email) {
 
         Product product = getProductOwnedByUser(id, email);
+        requireVerifiedStoreOwner(product);
         product.setActive(false);
 
         productRepository.save(product);
@@ -230,6 +243,7 @@ return mapToProductResponse(savedProduct);
             Integer quantity
     ) {
         Product product = getProductOwnedByUser(id, email);
+        requireVerifiedStoreOwner(product);
 
         if (quantity == null || quantity <= 0) {
             throw new IllegalArgumentException(

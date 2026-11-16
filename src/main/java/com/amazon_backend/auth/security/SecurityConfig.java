@@ -163,6 +163,7 @@ public class SecurityConfig {
 
                             String email = user.getAttribute("email");
                             String name = user.getAttribute("name");
+                            Boolean googleEmailVerified = user.getAttribute("email_verified");
                             User appUser = userRepository.findByEmail(email)
                                     .orElseGet(() -> {
                                         User newUser = new User();
@@ -170,9 +171,20 @@ public class SecurityConfig {
                                         newUser.setName(name);
                                         newUser.setPassword("");
                                         newUser.setRole(Role.USER);
+                                        newUser.setEmailVerified(
+                                                Boolean.TRUE.equals(googleEmailVerified)
+                                        );
+
                                         return userRepository.save(newUser);
                                     });
+                            // Google-verified email addresses can be trusted.
+                          // Do not downgrade an already verified account.
+                            if (Boolean.TRUE.equals(googleEmailVerified)
+                                    && !appUser.isEmailVerified()) {
 
+                                appUser.setEmailVerified(true);
+                                userRepository.save(appUser);
+                            }
                             String accessToken = jwtService.generateToken(appUser);
                             String refreshToken = refreshTokenService.createRefreshToken(email).getToken();
 
