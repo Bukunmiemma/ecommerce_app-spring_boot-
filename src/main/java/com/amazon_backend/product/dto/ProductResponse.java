@@ -8,7 +8,7 @@ public class ProductResponse {
     private String name;
     private String description;
     private BigDecimal price;
-    private Integer StockQuantity;
+    private Integer stockQuantity;
     private Set<String> categories;
     private Long storeId;
     private String storeName;
@@ -49,11 +49,11 @@ public class ProductResponse {
     }
 
     public Integer getStockQuantity() {
-        return StockQuantity;
+        return stockQuantity;
     }
 
     public void setStockQuantity(Integer stockQuantity) {
-        StockQuantity = stockQuantity;
+        this.stockQuantity = stockQuantity;
     }
 
     public Set<String> getCategories() {

@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +31,32 @@ public class GlobalExceptionHandler {
         return  ResponseEntity.badRequest().body(errors);
     }
 
+    // Handle ResponseStatusException with its original HTTP status
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(
+            ResponseStatusException ex,
+            HttpServletRequest request) {
 
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+
+        String errorMessage = status != null
+                ? status.getReasonPhrase()
+                : "HTTP Error";
+
+        String message = ex.getReason() != null
+                ? ex.getReason()
+                : errorMessage;
+
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                ex.getStatusCode().value(),
+                errorMessage,
+                message,
+                request.getRequestURI()
+        );
+
+        return new ResponseEntity<>(error, ex.getStatusCode());
+    }
     //Handle runtime exception
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse>
