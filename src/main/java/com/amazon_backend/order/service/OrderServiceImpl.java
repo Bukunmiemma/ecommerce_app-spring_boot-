@@ -16,6 +16,7 @@ import com.amazon_backend.order.repositories.OrderRepository;
 import com.amazon_backend.product.entity.Product;
 import com.amazon_backend.product.exception.ForbiddenException;
 import com.amazon_backend.product.repository.ProductRepository;
+import com.amazon_backend.store.entity.StoreStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -140,9 +141,12 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() ->
                             new RuntimeException("Product not found"));
 
-            if (!product.isActive()) {
+            if (!product.isActive()
+                    || product.getStore() == null
+                    || product.getStore().getStatus() != StoreStatus.ACTIVE) {
+
                 throw new IllegalArgumentException(
-                        "Product is no longer available: "
+                        "Product or its store is no longer available: "
                                 + product.getName());
             }
 

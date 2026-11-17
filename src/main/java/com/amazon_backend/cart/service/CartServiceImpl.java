@@ -12,6 +12,7 @@ import com.amazon_backend.cart.repository.CartRepository;
 import com.amazon_backend.product.entity.Product;
 import com.amazon_backend.product.exception.ProductNotFoundException;
 import com.amazon_backend.product.repository.ProductRepository;
+import com.amazon_backend.store.entity.StoreStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,11 @@ public class CartServiceImpl implements CartService {
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+    private boolean isProductAvailable(Product product) {
+        return product.isActive()
+                && product.getStore() != null
+                && product.getStore().getStatus() == StoreStatus.ACTIVE;
     }
 
     private Cart getOrCreateCartForLockedUser(User lockedUser) {
@@ -81,7 +87,7 @@ public class CartServiceImpl implements CartService {
         User user = getUserByEmail(email);
         Cart cart = getCartForUpdate(user);
         Product product = productRepository.findById(request.getProductId())
-                .filter(Product::isActive)
+                .filter(this::isProductAvailable)
                 .orElseThrow(() -> new ProductNotFoundException(
                         "Product not found or unavailable"));
 
@@ -161,8 +167,8 @@ public class CartServiceImpl implements CartService {
         response.setPrice(product.getPrice());
         response.setQuantity(item.getQuantity());
         response.setSubtotal(subtotal);
-        response.setAvailable(product.isActive());
-
+        //This ensures products belonging to inactive stores are marked unavailable in the customer's cart.
+        response.setAvailable(isProductAvailable(product));
         return response;
     }
 
@@ -199,9 +205,10 @@ public class CartServiceImpl implements CartService {
 
         Product product = cartItem.getProduct();
 
-        if (!product.isActive()) {
+
+        if (!isProductAvailable(product)) {
             throw new IllegalArgumentException(
-                    "This product is no longer available. Remove it from your cart.");
+                    "This product or its store is no longer available. Remove it from your cart.");
         }
 
         if (product.getStockQuantity() == null
