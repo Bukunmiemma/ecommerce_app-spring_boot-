@@ -1,4 +1,5 @@
 package com.amazon_backend.product.service;
+import com.amazon_backend.auth.repository.UserRepository;
 import com.amazon_backend.category.entity.Category;
 import com.amazon_backend.category.exception.CategoryNotFoundException;
 import com.amazon_backend.category.repository.CategoryRepository;
@@ -12,6 +13,10 @@ import com.amazon_backend.product.repository.ProductRepository;
 import com.amazon_backend.store.entity.Store;
 import com.amazon_backend.store.entity.StoreStatus;
 import com.amazon_backend.store.repositories.StoreRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,14 +33,18 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final StoreRepository storeRepository;
+    private final UserRepository userRepository;
 
     public ProductServiceImpl(ProductRepository productRepository,
                               CategoryRepository categoryRepository,
-                                StoreRepository storeRepository
+                                StoreRepository storeRepository,
+                              UserRepository userRepository
     ) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.storeRepository = storeRepository;
+        this.userRepository = userRepository;
+
 
     }
 
@@ -263,4 +272,43 @@ return mapToProductResponse(savedProduct);
     }
 
 
+     //Search Active products
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> searchActiveProducts(
+            String email,
+            String keyword,
+            Pageable pageable
+    ) {
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User account not found"
+                ));
+
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Please verify your email before searching products"
+            );
+        }
+
+        if (keyword == null || keyword.trim().length() < 2) {
+            throw new IllegalArgumentException(
+                    "Search keyword must contain at least 2 characters"
+            );
+        }
+
+        Pageable safePageable = PageRequest.of(
+                pageable.getPageNumber(),
+                Math.min(pageable.getPageSize(), 50),
+                Sort.by(Sort.Direction.ASC, "name")
+        );
+
+        return productRepository.searchActiveProducts(
+                keyword.trim(),
+                StoreStatus.ACTIVE,
+                safePageable
+        ).map(this::mapToProductResponse);
+    }
 }

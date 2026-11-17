@@ -154,6 +154,16 @@ public class SecurityConfig {
                                         "/api/categories/**"
                                 ).permitAll()
 
+                        //Users should be able to search a store
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/stores/search"
+                        ).authenticated()
+           // Users should be able to search for products
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/products/search"
+                        ).authenticated()
                                 .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

@@ -4,6 +4,8 @@ import com.amazon_backend.product.dto.ProductRequest;
 import com.amazon_backend.product.dto.ProductResponse;
 import com.amazon_backend.product.dto.UpdateProductRequest;
 import com.amazon_backend.product.entity.Product;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -37,6 +39,13 @@ public interface ProductService {
     //For example: updateProduct(10L, "vendor@gmail.com", request);
 
     List<ProductResponse> getProductsByStoreId(Long storeId);
+
+    //Search
+    Page<ProductResponse> searchActiveProducts(
+            String email,
+            String keyword,
+            Pageable pageable
+    );
 }
 
 //What we've secured so far

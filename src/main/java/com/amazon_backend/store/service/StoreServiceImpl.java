@@ -6,6 +6,10 @@ import com.amazon_backend.store.dto.StoreResponse;
 import com.amazon_backend.store.entity.Store;
 import com.amazon_backend.store.entity.StoreStatus;
 import com.amazon_backend.store.repositories.StoreRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -109,5 +113,44 @@ public class StoreServiceImpl implements StoreService {
                 ));
 
         return mapToResponse(store);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<StoreResponse> searchActiveStores(
+            String email,
+            String keyword,
+            Pageable pageable
+    ) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User account not found"
+                ));
+
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Please verify your email before searching stores"
+            );
+        }
+
+        if (keyword == null || keyword.trim().length() < 2) {
+            throw new IllegalArgumentException(
+                    "Search keyword must contain at least 2 characters"
+            );
+        }
+
+        Pageable safePageable = PageRequest.of(
+                pageable.getPageNumber(),
+                Math.min(pageable.getPageSize(), 50),
+                Sort.by(Sort.Direction.ASC, "name")
+        );
+
+        return storeRepository.searchActiveStores(
+                keyword.trim(),
+                StoreStatus.ACTIVE,
+                safePageable
+        ).map(this::mapToResponse);
     }
 }

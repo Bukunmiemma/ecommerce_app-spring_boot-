@@ -3,6 +3,8 @@ package com.amazon_backend.product.repository;
 import com.amazon_backend.product.entity.Product;
 import com.amazon_backend.store.entity.StoreStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -61,5 +63,24 @@ import java.util.Optional;
         List<Product> findByStore_IdAndActiveTrueAndStore_Status(
                 Long storeId,
                 StoreStatus status
+        );
+
+        @Query("""
+    SELECT DISTINCT p
+    FROM Product p
+    LEFT JOIN p.categories c
+    WHERE p.active = true
+    AND p.store.status = :status
+    AND (
+        LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(COALESCE(p.description, ''))
+            LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+    """)
+        Page<Product> searchActiveProducts(
+                @Param("keyword") String keyword,
+                @Param("status") StoreStatus status,
+                Pageable pageable
         );
     }
