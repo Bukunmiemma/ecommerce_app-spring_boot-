@@ -2,6 +2,7 @@ package com.amazon_backend.globalexception;
 import com.amazon_backend.category.exception.CategoryAlreadyExistException;
 import com.amazon_backend.category.exception.CategoryNotFoundException;
 import com.amazon_backend.product.exception.ForbiddenException;
+import com.amazon_backend.product.exception.ProductNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +57,23 @@ public class GlobalExceptionHandler {
         );
 
         return new ResponseEntity<>(error, ex.getStatusCode());
+    }
+    // Handle product not found
+    @ExceptionHandler(ProductNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleProductNotFound(
+            ProductNotFoundException ex,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
     //Handle runtime exception
     @ExceptionHandler(RuntimeException.class)
