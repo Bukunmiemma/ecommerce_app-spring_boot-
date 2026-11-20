@@ -163,7 +163,10 @@ public class SecurityConfig {
                                         HttpMethod.GET,
                                         "/api/categories/**"
                                 ).permitAll()
-
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/payments/webhook/paystack"
+                        ).permitAll()
                                 .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2

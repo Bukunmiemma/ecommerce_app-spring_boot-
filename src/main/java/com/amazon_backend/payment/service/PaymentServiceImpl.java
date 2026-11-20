@@ -312,6 +312,68 @@ public class PaymentServiceImpl implements PaymentService {
 
         return response;
     }
+
+    @Override
+    public void verifyPaymentFromWebhook(String reference) {
+
+        if (reference == null || reference.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Payment reference is required"
+            );
+        }
+
+        // Ask Paystack directly to verify the transaction.
+        PaystackVerifyResponse response = paystackRestClient
+                .get()
+                .uri("/transaction/verify/{reference}", reference)
+                .retrieve()
+                .body(PaystackVerifyResponse.class);
+
+        if (response == null
+                || !response.isStatus()
+                || response.getData() == null) {
+
+            throw new RuntimeException(
+                    "Unable to verify payment with Paystack"
+            );
+        }
+
+        PaystackVerifyResponse.Data data = response.getData();
+
+        if (!reference.equals(data.getReference())) {
+            throw new RuntimeException(
+                    "Payment reference mismatch"
+            );
+        }
+
+        if (data.getCustomer() == null
+                || data.getCustomer().getEmail() == null
+                || data.getCustomer().getEmail().isBlank()) {
+
+            throw new RuntimeException(
+                    "Paystack customer information is missing"
+            );
+        }
+
+        // Never confirm a payment based only on the webhook payload.
+        if (!"success".equalsIgnoreCase(data.getStatus())) {
+            return;
+        }
+
+        // The existing confirmation method checks:
+        // - Order ownership against the customer email.
+        // - Transaction reference.
+        // - Amount.
+        // - Currency.
+        // - Payment status and idempotency.
+        paymentPreparationService.confirmSuccessfulPayment(
+                data.getCustomer().getEmail(),
+                data.getReference(),
+                data.getAmount(),
+                data.getCurrency(),
+                data.getCustomer().getEmail()
+        );
+    }
 }
 //Your PaymentPreparationService is saving the payment reference and updating the order.
 //Your PaymentServiceImpl is receiving the authorization URL and access code from Paystack

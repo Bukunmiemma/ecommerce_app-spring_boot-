@@ -10,7 +10,9 @@ public interface PaymentService {
     );
 
     void verifyPayment(String email, String reference);
+    void verifyPaymentFromWebhook(String reference);
 }
+
 
 //When Flutter receives the Paystack callback, it will send the transaction reference to our backend.
 //Our backend will then contact Paystack directly to confirm whether the transaction succeeded.
