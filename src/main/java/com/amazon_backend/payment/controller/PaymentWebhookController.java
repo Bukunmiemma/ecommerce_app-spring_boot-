@@ -1,25 +1,25 @@
 package com.amazon_backend.payment.controller;
 
 import com.amazon_backend.payment.service.PaystackWebhookService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 @RestController
 @RequestMapping("/api/payments/webhook")
 public class PaymentWebhookController {
 
     private final PaystackWebhookService webhookService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     public PaymentWebhookController(
             PaystackWebhookService webhookService,
-            ObjectMapper objectMapper
+            JsonMapper jsonMapper
     ) {
         this.webhookService = webhookService;
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
     }
 
     @PostMapping("/paystack")
@@ -31,19 +31,19 @@ public class PaymentWebhookController {
             @RequestBody String payload
     ) {
 
-        // 1. Validate Paystack's signature.
+        // 1. Validate Paystack signature.
         if (!webhookService.isValidSignature(payload, signature)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid webhook signature");
         }
 
         try {
-            // 2. Parse the event.
-            JsonNode root = objectMapper.readTree(payload);
+            // 2. Parse webhook JSON.
+            JsonNode root = jsonMapper.readTree(payload);
 
-            String event = root.path("event").asText();
+            String event = root.path("event").asString();
 
-            // 3. We currently process successful transactions only.
+            // 3. Process successful payments only.
             if (!"charge.success".equals(event)) {
                 return ResponseEntity.ok("Event ignored");
             }
@@ -51,20 +51,19 @@ public class PaymentWebhookController {
             // 4. Extract transaction reference.
             String reference = root.path("data")
                     .path("reference")
-                    .asText(null);
+                    .asString();
 
-            if (reference == null || reference.isBlank()) {
+            if (reference.isBlank()) {
                 return ResponseEntity.badRequest()
                         .body("Missing transaction reference");
             }
 
-            // 5. Verify directly with Paystack and confirm payment.
+            // 5. Verify and process payment.
             webhookService.processSuccessfulPayment(reference);
 
             return ResponseEntity.ok("Webhook processed");
 
         } catch (Exception ex) {
-            // A non-2xx response allows Paystack to retry delivery.
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Webhook processing failed");
         }
