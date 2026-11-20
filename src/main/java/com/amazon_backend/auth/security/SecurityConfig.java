@@ -136,6 +136,16 @@ public class SecurityConfig {
                                         "/api/stores/getStores"
                                 ).authenticated()
 
+                        //Users should be able to search a store like normal search, pagination and sorting
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/stores/search"
+                        ).authenticated()
+                        // Users should be able to search for products
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/products/search"
+                        ).authenticated()
                          // Public store discovery.
                                 .requestMatchers(
                                         HttpMethod.GET,
@@ -154,16 +164,6 @@ public class SecurityConfig {
                                         "/api/categories/**"
                                 ).permitAll()
 
-                        //Users should be able to search a store
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/stores/search"
-                        ).authenticated()
-           // Users should be able to search for products
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/products/search"
-                        ).authenticated()
                                 .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
